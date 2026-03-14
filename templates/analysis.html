@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <div class="container">
+        <div class="header-content">
+            <h1>Expense Analysis</h1>
+            <div class="user-info">
+                <span>Welcome, {{ username }}</span>
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <!-- Desktop Menu -->
+                <div class="header-actions desktop-menu">
+                    <a href="/dashboard" class="nav-btn">Dashboard</a>
+                    <a href="/logout" class="nav-btn logout">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Mobile Menu (Hidden by default) -->
+    <div id="mobile-menu" class="mobile-menu">
+        <a href="/dashboard" class="mobile-menu-item">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/logout" class="mobile-menu-item logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</header>
+
+<main class="container">
+    <div class="summary-cards">
+        <div class="summary-card chart-container">
+            <h3 style="margin-bottom:10px;">Category Distribution</h3>
+            <canvas id="categoryChart"></canvas>
+        </div>
+
+        <div class="summary-card chart-container">
+            <h3 style="margin-bottom:10px;">Monthly Spending</h3>
+            <canvas id="barChart"></canvas>
+        </div>
+    </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    loadStats();
+    
+    // Mobile menu toggle
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    menuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('active');
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!menuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+            mobileMenu.classList.remove('active');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,982 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <div class="header-content container">
+        <h1>Split Expenses</h1>
+        <div class="user-info">
+            <span>Welcome, {{ username }}</span>
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <!-- Desktop Menu -->
+            <div class="header-actions desktop-menu">
+                <button id="theme-toggle" class="theme-toggle-btn">
+                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun"></i>
+                </button>
+                <a href="/dashboard" class="nav-btn">Dashboard</a>
+                <a href="/analysis" class="nav-btn">Analysis</a>
+                <a href="/logout" class="nav-btn logout">Logout</a>
+            </div>
+        </div>
+    </div>
+    <!-- Mobile Menu (Hidden by default) -->
+    <div id="mobile-menu" class="mobile-menu">
+        <a href="/dashboard" class="mobile-menu-item">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/analysis" class="mobile-menu-item">
+            <i class="fas fa-chart-pie"></i> Analysis
+        </a>
+        <div class="mobile-menu-item theme-toggle-mobile">
+            <button id="theme-toggle-mobile" class="theme-toggle-btn">
+                <i class="fas fa-moon"></i>
+                <i class="fas fa-sun"></i>
+            </button>
+            <span>Dark Mode</span>
+        </div>
+        <a href="/logout" class="mobile-menu-item logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</header>
+
+<main class="container">
+    <!-- Create New Trip Section -->
+    <div class="section-card">
+        <h2>Create New Trip</h2>
+        <form id="trip-form" class="trip-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="trip-name">Trip Name</label>
+                    <input type="text" id="trip-name" placeholder="e.g., Goa Trip 2024" required>
+                </div>
+                <button type="submit" class="submit-btn" style="width: auto; margin-top: 24px;">Create Trip</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Past Trips Section -->
+    <div class="section-card">
+        <h2>📜 Past Trips</h2>
+        <div id="past-trips-container">
+            <p class="loading-message">Loading past trips...</p>
+        </div>
+    </div>
+
+    <!-- Active Trip Section (hidden by default) -->
+    <div id="active-trip-section" class="section-card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h2 id="active-trip-name">Trip Name</h2>
+            <div>
+                <button id="end-trip-btn" class="delete-btn" style="padding: 8px 15px; margin-right: 10px;">End Trip</button>
+                <button id="cancel-trip-btn" class="btn-primary" style="padding: 8px 15px; background-color: var(--gray);">Cancel</button>
+            </div>
+        </div>
+        
+        <!-- Add Participants -->
+        <div style="margin-bottom: 30px;">
+            <h3>👥 Participants</h3>
+            <div class="participants-list" id="participants-list">
+                <!-- Participants will be added here -->
+            </div>
+            
+            <form id="add-participant-form" class="add-participant-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="text" id="participant-name" placeholder="Enter name" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: auto;">Add</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Add Expense -->
+        <div style="margin-bottom: 30px;">
+            <h3>💳 Add Expense</h3>
+            <form id="trip-expense-form">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="expense-desc" placeholder="e.g., Dinner, Taxi, Hotel" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="expense-amount" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Paid By</label>
+                    <select id="paid-by" required>
+                        <option value="">Select who paid</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Split Between</label>
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" id="select-all-btn" class="btn-primary" style="padding: 5px 15px; font-size: 0.9rem; width: auto;">✅ Select All</button>
+                    </div>
+                    <div id="split-between" class="checkbox-group">
+                        <!-- Checkboxes will be added here -->
+                    </div>
+                </div>  
+                
+                <button type="submit" class="submit-btn">Add Expense</button>
+            </form>
+        </div>
+        
+        <!-- Trip Expenses List -->
+        <div style="margin-bottom: 30px;">
+            <h3>📋 Trip Expenses</h3>
+            <div class="table-container">
+                <table class="expenses-table" id="trip-expenses-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Paid By</th>
+                            <th>Split Between</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trip-expenses-tbody">
+                        <tr>
+                            <td colspan="5" class="loading-message">No expenses added yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Settlement Summary -->
+        <div class="settlement-section">
+            <h3>Settlement Summary</h3>
+            <div id="settlement-summary" class="settlement-summary">
+                <!-- Settlement calculations will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip Detail Modal (hidden by default) -->
+    <div id="trip-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-trip-name">Trip Name</h2>
+                <button class="modal-close" onclick="closeTripModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Trip details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</main>
+
+<style>
+/* Previous styles remain same, add these new ones */
+
+/* Past Trips Styles */
+.past-trips-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+@media (min-width: 768px) {
+    .past-trips-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .past-trips-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.past-trip-card {
+    background: var(--light);
+    border-radius: var(--radius);
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border);
+}
+
+.past-trip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--primary);
+}
+
+.past-trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.past-trip-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.past-trip-date {
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.past-trip-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    max-width: 800px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    z-index: 1;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.modal-close:hover {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* Read-only styles */
+.readonly-expense {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.readonly-section {
+    background: var(--light);
+    padding: 15px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+}
+
+.readonly-section h4 {
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+/* Cancel button */
+#cancel-trip-btn:hover {
+    opacity: 0.9;
+}
+</style>
+
+<script>
+let currentTrip = null;
+let participants = [];
+let tripExpenses = [];
+let isViewingPastTrip = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupThemeToggle();
+    loadSavedTrip();
+    loadPastTrips();
+});
+
+// Create new trip
+document.getElementById('trip-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const tripName = document.getElementById('trip-name').value;
+    
+    currentTrip = {
+        id: Date.now(),
+        name: tripName,
+        date: new Date().toISOString()
+    };
+    
+    participants = [];
+    tripExpenses = [];
+    isViewingPastTrip = false;
+    
+    document.getElementById('active-trip-name').textContent = tripName;
+    document.getElementById('active-trip-section').style.display = 'block';
+    document.getElementById('trip-form').reset();
+    
+    // Enable all inputs for new trip
+    enableTripInputs(true);
+    
+    updateParticipantsList();
+    updatePaidBySelect();
+    updateSplitBetween();
+    updateTripExpensesTable();
+    calculateSettlement();
+    
+    saveTrip();
+    showToast(`Trip "${tripName}" created!`, 'success');
+});
+
+// Enable/disable trip inputs
+function enableTripInputs(enable) {
+    const inputs = document.querySelectorAll('#add-participant-form input, #trip-expense-form input, #trip-expense-form select, #trip-expense-form button, #select-all-btn');
+    inputs.forEach(input => {
+        input.disabled = !enable;
+    });
+    
+    // Also disable delete buttons in expenses table
+    document.querySelectorAll('.delete-expense-btn').forEach(btn => {
+        btn.style.display = enable ? 'inline-block' : 'none';
+    });
+}
+
+// Add participant
+document.getElementById('add-participant-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (isViewingPastTrip) {
+        showToast('This is a past trip. View only!', 'danger');
+        return;
+    }
+    const name = document.getElementById('participant-name').value.trim();
+    
+    if (name && !participants.includes(name)) {
+        participants.push(name);
+        updateParticipantsList();
+        updatePaidBySelect();
+        updateSplitBetween();
+        document.getElementById('participant-name').value = '';
+        saveTrip();
+    } else if (participants.includes(name)) {
+        showToast('Participant already exists!', 'danger');
+    }
+});
+
+// Add trip expense
+document.getElementById('trip-expense-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (isViewingPastTrip) {
+        showToast('This is a past trip. View only!', 'danger');
+        return;
+    }
+    
+    const desc = document.getElementById('expense-desc').value;
+    const amount = parseFloat(document.getElementById('expense-amount').value);
+    const paidBy = document.getElementById('paid-by').value;
+    
+    // Get selected participants for split
+    const checkboxes = document.querySelectorAll('input[name="split-with"]:checked');
+    const splitBetween = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (splitBetween.length === 0) {
+        showToast('Select at least one person to split with!', 'danger');
+        return;
+    }
+    
+    const expense = {
+        id: Date.now(),
+        description: desc,
+        amount: amount,
+        paidBy: paidBy,
+        splitBetween: splitBetween
+    };
+    
+    tripExpenses.push(expense);
+    updateTripExpensesTable();
+    calculateSettlement();
+    
+    // Reset form
+    document.getElementById('expense-desc').value = '';
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('paid-by').value = '';
+    checkboxes.forEach(cb => cb.checked = false);
+    
+    saveTrip();
+    showToast('Expense added!', 'success');
+});
+
+// Update participants list
+function updateParticipantsList() {
+    const list = document.getElementById('participants-list');
+    if (participants.length === 0) {
+        list.innerHTML = '<p style="color: var(--gray);">No participants added yet</p>';
+        return;
+    }
+    
+    list.innerHTML = participants.map(name => `
+        <span class="participant-tag">
+            ${name}
+            ${!isViewingPastTrip ? `<button onclick="removeParticipant('${name}')">×</button>` : ''}
+        </span>
+    `).join('');
+}
+
+// Update paid by select dropdown
+function updatePaidBySelect() {
+    const select = document.getElementById('paid-by');
+    select.innerHTML = '<option value="">Select who paid</option>' + 
+        participants.map(name => `<option value="${name}">${name}</option>`).join('');
+}
+
+// Update split between checkboxes
+function updateSplitBetween() {
+    const container = document.getElementById('split-between');
+    if (participants.length === 0) {
+        container.innerHTML = '<p style="color: var(--gray);">Add participants first</p>';
+        return;
+    }
+    
+    container.innerHTML = participants.map(name => `
+        <div class="checkbox-item">
+            <input type="checkbox" name="split-with" value="${name}" id="split-${name}" ${isViewingPastTrip ? 'disabled' : ''}>
+            <label for="split-${name}">${name}</label>
+        </div>
+    `).join('');
+}
+
+// Remove participant
+function removeParticipant(name) {
+    if (isViewingPastTrip) {
+        showToast('This is a past trip. View only!', 'danger');
+        return;
+    }
+    if (confirm(`Remove ${name} from trip?`)) {
+        participants = participants.filter(p => p !== name);
+        
+        // Remove expenses where this person was involved
+        tripExpenses = tripExpenses.filter(e => 
+            e.paidBy !== name && !e.splitBetween.includes(name)
+        );
+        
+        updateParticipantsList();
+        updatePaidBySelect();
+        updateSplitBetween();
+        updateTripExpensesTable();
+        calculateSettlement();
+        saveTrip();
+    }
+}
+
+// Update trip expenses table
+function updateTripExpensesTable() {
+    const tbody = document.getElementById('trip-expenses-tbody');
+    
+    if (tripExpenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-message">No expenses added yet</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = tripExpenses.map(exp => `
+        <tr>
+            <td>${exp.description}</td>
+            <td>₹${exp.amount.toFixed(2)}</td>
+            <td>${exp.paidBy}</td>
+            <td>${exp.splitBetween.join(', ')}</td>
+            <td>
+                ${!isViewingPastTrip ? `<button class="delete-expense-btn" onclick="deleteExpense(${exp.id})">×</button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Delete expense
+function deleteExpense(id) {
+    if (isViewingPastTrip) {
+        showToast('This is a past trip. View only!', 'danger');
+        return;
+    }
+    tripExpenses = tripExpenses.filter(e => e.id !== id);
+    updateTripExpensesTable();
+    calculateSettlement();
+    saveTrip();
+}
+
+// Calculate who owes whom
+function calculateSettlement() {
+    if (participants.length === 0 || tripExpenses.length === 0) {
+        document.getElementById('settlement-summary').innerHTML = 
+            '<p style="color: var(--gray);">Add expenses to see settlement</p>';
+        return;
+    }
+    
+    // Calculate balances
+    let balances = {};
+    participants.forEach(p => balances[p] = 0);
+    
+    tripExpenses.forEach(expense => {
+        // Person who paid gets credit
+        balances[expense.paidBy] += expense.amount;
+        
+        // Each person in split owes their share
+        const share = expense.amount / expense.splitBetween.length;
+        expense.splitBetween.forEach(person => {
+            balances[person] -= share;
+        });
+    });
+    
+    // Calculate settlements
+    let debtors = [];
+    let creditors = [];
+    
+    for (let [person, balance] of Object.entries(balances)) {
+        if (balance < -0.01) { // Owes money (negative)
+            debtors.push({ person, amount: -balance });
+        } else if (balance > 0.01) { // Gets money (positive)
+            creditors.push({ person, amount: balance });
+        }
+    }
+    
+    // Sort by amount (largest first)
+    debtors.sort((a, b) => b.amount - a.amount);
+    creditors.sort((a, b) => b.amount - a.amount);
+    
+    // Generate settlement summary
+    let html = '<h4>Deti And Leti:</h4>';
+    
+    if (debtors.length === 0 && creditors.length === 0) {
+        html += '<p>All settled up! 🎉</p>';
+    } else {
+        let i = 0, j = 0;
+        while (i < debtors.length && j < creditors.length) {
+            const debtor = debtors[i];
+            const creditor = creditors[j];
+            
+            const amount = Math.min(debtor.amount, creditor.amount);
+            
+            html += `
+                <div class="settlement-item">
+                    <span class="settlement-owes">${debtor.person}</span>
+                    <span>owes</span>
+                    <span class="settlement-gets">${creditor.person}</span>
+                    <span>₹${amount.toFixed(2)}</span>
+                </div>
+            `;
+            
+            debtor.amount -= amount;
+            creditor.amount -= amount;
+            
+            if (debtor.amount < 0.01) i++;
+            if (creditor.amount < 0.01) j++;
+        }
+    }
+    
+    // Add total summary
+    const totalSpent = tripExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const perPerson = totalSpent / participants.length;
+    
+    html += `
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+            <p><strong>Total Spent:</strong> ₹${totalSpent.toFixed(2)}</p>
+            <p><strong>Per Person Share:</strong> ₹${perPerson.toFixed(2)}</p>
+        </div>
+    `;
+    
+    document.getElementById('settlement-summary').innerHTML = html;
+    
+    // Return data for saving
+    return { total: totalSpent, perPerson: perPerson };
+}
+
+// End trip - Save to database
+document.getElementById('end-trip-btn').addEventListener('click', async () => {
+    if (isViewingPastTrip) {
+        showToast('This is already a past trip!', 'danger');
+        return;
+    }
+    if (!currentTrip || participants.length === 0) {
+        showToast('No active trip to end!', 'danger');
+        return;
+    }
+    
+    if (confirm('End this trip? It will be saved to your past trips.')) {
+        // Calculate final totals
+        const summary = calculateSettlement();
+        
+        // Prepare trip data for saving
+        const tripData = {
+            id: currentTrip.id,
+            name: currentTrip.name,
+            date: currentTrip.date,
+            participants: participants,
+            expenses: tripExpenses,
+            total: summary.total,
+            per_person: summary.perPerson
+        };
+        
+        try {
+            // Save to server
+            const response = await fetch('/save_trip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tripData)
+            });
+            
+            if (response.ok) {
+                // Clear current trip
+                currentTrip = null;
+                participants = [];
+                tripExpenses = [];
+                
+                document.getElementById('active-trip-section').style.display = 'none';
+                document.getElementById('trip-name').value = '';
+                
+                // Clear localStorage
+                localStorage.removeItem('currentTrip');
+                localStorage.removeItem('participants');
+                localStorage.removeItem('tripExpenses');
+                
+                // Reload past trips
+                loadPastTrips();
+                
+                showToast('Trip ended and saved!', 'success');
+            } else {
+                throw new Error('Failed to save trip');
+            }
+        } catch (error) {
+            showToast(error.message, 'danger');
+        }
+    }
+});
+
+// Cancel trip (without saving)
+document.getElementById('cancel-trip-btn').addEventListener('click', () => {
+    if (confirm('Cancel this trip? All unsaved data will be lost.')) {
+        currentTrip = null;
+        participants = [];
+        tripExpenses = [];
+        isViewingPastTrip = false;
+        
+        document.getElementById('active-trip-section').style.display = 'none';
+        document.getElementById('trip-name').value = '';
+        
+        localStorage.removeItem('currentTrip');
+        localStorage.removeItem('participants');
+        localStorage.removeItem('tripExpenses');
+        
+        showToast('Trip cancelled!', 'success');
+    }
+});
+
+// Load past trips
+async function loadPastTrips() {
+    try {
+        const response = await fetch('/get_past_trips');
+        const trips = await response.json();
+        
+        displayPastTrips(trips);
+    } catch (error) {
+        console.error('Error loading past trips:', error);
+        document.getElementById('past-trips-container').innerHTML = 
+            '<p class="loading-message" style="color: var(--danger);">Error loading past trips</p>';
+    }
+}
+
+// Display past trips
+function displayPastTrips(trips) {
+    const container = document.getElementById('past-trips-container');
+    
+    if (trips.length === 0) {
+        container.innerHTML = '<p class="loading-message">No past trips yet</p>';
+        return;
+    }
+    
+    let html = '<div class="past-trips-grid">';
+    
+    trips.forEach(trip => {
+        const date = new Date(trip.end_date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        
+        html += `
+            <div class="past-trip-card" onclick="viewPastTrip(${trip.id})">
+                <div class="past-trip-header">
+                    <span class="past-trip-name">${trip.name}</span>
+                    <span class="past-trip-date">${date}</span>
+                </div>
+                <div class="past-trip-stats">
+                    <span>${trip.participants.length} people</span>
+                    <span>₹${trip.total.toFixed(2)}</span>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--gray); margin-top: 5px;">
+                    Per person: ₹${trip.per_person.toFixed(2)}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// View past trip
+async function viewPastTrip(tripId) {
+    try {
+        const response = await fetch(`/get_trip/${tripId}`);
+        const trip = await response.json();
+        
+        // Show modal with trip details
+        showTripModal(trip);
+    } catch (error) {
+        showToast('Error loading trip details', 'danger');
+    }
+}
+
+// Show trip modal
+function showTripModal(trip) {
+    const modal = document.getElementById('trip-detail-modal');
+    document.getElementById('modal-trip-name').textContent = trip.name;
+    
+    const modalBody = document.getElementById('modal-body');
+    
+    // Format date
+    const endDate = new Date(trip.end_date).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    let expensesHtml = '';
+    if (trip.expenses.length === 0) {
+        expensesHtml = '<p>No expenses</p>';
+    } else {
+        expensesHtml = `
+            <table class="expenses-table" style="min-width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Paid By</th>
+                        <th>Split Between</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trip.expenses.map(exp => `
+                        <tr>
+                            <td>${exp.description}</td>
+                            <td>₹${exp.amount.toFixed(2)}</td>
+                            <td>${exp.paidBy}</td>
+                            <td>${exp.splitBetween.join(', ')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+    
+    // Calculate who owes whom for display
+    let balances = {};
+    trip.participants.forEach(p => balances[p] = 0);
+    
+    trip.expenses.forEach(expense => {
+        balances[expense.paidBy] += expense.amount;
+        const share = expense.amount / expense.splitBetween.length;
+        expense.splitBetween.forEach(person => {
+            balances[person] -= share;
+        });
+    });
+    
+    let settlementHtml = '';
+    for (let [person, balance] of Object.entries(balances)) {
+        if (Math.abs(balance) > 0.01) {
+            const status = balance > 0 ? 'gets' : 'owes';
+            const amount = Math.abs(balance);
+            settlementHtml += `
+                <div class="settlement-item">
+                    <span class="${balance > 0 ? 'settlement-gets' : 'settlement-owes'}">${person}</span>
+                    <span>${balance > 0 ? 'gets' : 'owes'}</span>
+                    <span>₹${amount.toFixed(2)}</span>
+                </div>
+            `;
+        }
+    }
+    
+    modalBody.innerHTML = `
+        <div class="readonly-section">
+            <h4>📅 Trip Details</h4>
+            <p><strong>Ended on:</strong> ${endDate}</p>
+            <p><strong>Total Participants:</strong> ${trip.participants.length}</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                ${trip.participants.map(p => `
+                    <span class="participant-tag" style="background: var(--gray);">${p}</span>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="readonly-section">
+            <h4>💰 Summary</h4>
+            <p><strong>Total Spent:</strong> ₹${trip.total.toFixed(2)}</p>
+            <p><strong>Per Person Share:</strong> ₹${trip.per_person.toFixed(2)}</p>
+        </div>
+        
+        <div class="readonly-section">
+            <h4>📋 Expenses</h4>
+            ${expensesHtml}
+        </div>
+        
+        <div class="readonly-section">
+            <h4>🧾 Settlement</h4>
+            ${settlementHtml || '<p>All settled up! 🎉</p>'}
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+}
+
+// Close modal
+function closeTripModal() {
+    document.getElementById('trip-detail-modal').style.display = 'none';
+}
+
+// Save trip to localStorage
+function saveTrip() {
+    if (currentTrip && !isViewingPastTrip) {
+        localStorage.setItem('currentTrip', JSON.stringify(currentTrip));
+        localStorage.setItem('participants', JSON.stringify(participants));
+        localStorage.setItem('tripExpenses', JSON.stringify(tripExpenses));
+    }
+}
+
+// Load saved trip
+function loadSavedTrip() {
+    const savedTrip = localStorage.getItem('currentTrip');
+    const savedParticipants = localStorage.getItem('participants');
+    const savedExpenses = localStorage.getItem('tripExpenses');
+    
+    if (savedTrip && savedParticipants && savedExpenses) {
+        currentTrip = JSON.parse(savedTrip);
+        participants = JSON.parse(savedParticipants);
+        tripExpenses = JSON.parse(savedExpenses);
+        isViewingPastTrip = false;
+        
+        document.getElementById('active-trip-name').textContent = currentTrip.name;
+        document.getElementById('active-trip-section').style.display = 'block';
+        
+        enableTripInputs(true);
+        updateParticipantsList();
+        updatePaidBySelect();
+        updateSplitBetween();
+        updateTripExpensesTable();
+        calculateSettlement();
+    }
+}
+
+// Select all functionality
+document.getElementById('select-all-btn').addEventListener('click', function() {
+    if (isViewingPastTrip) {
+        showToast('This is a past trip. View only!', 'danger');
+        return;
+    }
+    const checkboxes = document.querySelectorAll('input[name="split-with"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    this.textContent = allChecked ? '✅ Select All' : '❌ Deselect All';
+});
+
+// Toast function
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Click outside modal to close
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('trip-detail-modal');
+    if (e.target === modal) {
+        closeTripModal();
+    }
+});
+document.addEventListener('DOMContentLoaded', function() {
+    setupThemeToggle();
+    loadSavedTrip();
+    loadPastTrips();
+    
+    // Mobile menu toggle
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    menuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('active');
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!menuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+            mobileMenu.classList.remove('active');
+        }
+    });
+    
+    // Mobile theme toggle
+    const mobileThemeToggle = document.getElementById('theme-toggle-mobile');
+    if (mobileThemeToggle) {
+        mobileThemeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateChartColors();
+        });
+    }
+});
+</script>
+{% endblock %}

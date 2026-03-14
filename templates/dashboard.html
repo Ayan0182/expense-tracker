@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <div class="header-content container">
+        <h1>Expense Tracker</h1>
+        <div class="user-info">
+            <span>Welcome, {{ username }}</span>
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <!-- Desktop Menu -->
+            <div class="header-actions desktop-menu">
+                <button id="theme-toggle" class="theme-toggle-btn">
+                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun"></i>
+                </button>
+                <a href="/split-expenses" class="nav-btn">Split Expenses</a>
+                <a href="/analysis" class="nav-btn">Analysis</a>
+                <a href="/logout" class="nav-btn logout">Logout</a>
+            </div>
+        </div>
+    </div>
+    <!-- Mobile Menu (Hidden by default) -->
+    <div id="mobile-menu" class="mobile-menu">
+        <a href="/split-expenses" class="mobile-menu-item">
+            <i class="fas fa-users"></i> Split Expenses
+        </a>
+        <a href="/analysis" class="mobile-menu-item">
+            <i class="fas fa-chart-pie"></i> Analysis
+        </a>
+        <div class="mobile-menu-item theme-toggle-mobile">
+            <button id="theme-toggle-mobile" class="theme-toggle-btn">
+                <i class="fas fa-moon"></i>
+                <i class="fas fa-sun"></i>
+            </button>
+            <span>Dark Mode</span>
+        </div>
+        <a href="/logout" class="mobile-menu-item logout">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</header>
+
+<main class="container">
+    <!-- Monthly Summary Section -->
+    <div class="section-card">
+        <h2>Monthly Summary</h2>
+        <div class="summary-grid">
+            <div class="summary-box total-spent">
+                <span class="summary-label">Total Spent</span>
+                <span class="summary-amount" id="total-amount">₹0</span>
+            </div>
+            <div class="summary-box budget-box">
+                <span class="summary-label">Monthly Budget</span>
+                <form id="budget-form" class="budget-form">
+                    <input 
+                        type="number" 
+                        id="monthly-budget" 
+                        placeholder="Enter amount" 
+                        step="any"
+                        min="0"
+                        required
+                    >
+                    <button type="submit" id="set-budget-btn">Set</button>
+                </form>
+                <div id="budget-status" class="budget-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Expense Section -->
+    <div class="section-card">
+        <h2>Add New Expense</h2>
+        <form id="expense-form" class="expense-form">
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" id="amount" step="0.01" min="0" placeholder="e.g., 500" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Home">🏠 Home</option>
+                    <option value="Education">📚 Education</option>
+                    <option value="Hobby">🎮 Hobby</option>
+                    <option value="Transportation">🚗 Transportation</option>
+                    <option value="Food">🍕 Food</option>
+                    <option value="Health">💊 Health</option>
+                    <option value="Shopping">🛍️ Shopping</option>
+                    <option value="Other">📦 Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" placeholder="What did you spend on?" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date">
+                </div>
+                <button type="submit" class="submit-btn" id="submit-expense-btn">Add Expense</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Expenses Section -->
+    <div class="section-card">
+        <h2>Recent Expenses</h2>
+        
+        <!-- Date Filter -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="start-date">From</label>
+                <input type="date" id="start-date">
+            </div>
+            <div class="filter-group">
+                <label for="end-date">To</label>
+                <input type="date" id="end-date">
+            </div>
+            <button id="filter-btn" class="filter-btn">Apply Filter</button>
+        </div>
+        
+        <!-- Expenses Table -->
+        <div class="table-container">
+            <table class="expenses-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount (₹)</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="expenses-tbody">
+                    <tr>
+                        <td colspan="5" class="loading-message">Loading expenses...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <button id="export-btn" class="export-btn">📥 Export to CSV</button>
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default dates
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        document.getElementById('date').valueAsDate = today;
+        document.getElementById('start-date').valueAsDate = thirtyDaysAgo;
+        document.getElementById('end-date').valueAsDate = today;
+        
+        // Load initial data
+        loadExpenses();
+        loadStats();
+        setupThemeToggle();
+        
+        // Mobile menu toggle
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('active');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!menuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+                mobileMenu.classList.remove('active');
+            }
+        });
+        
+        // Mobile theme toggle
+        const mobileThemeToggle = document.getElementById('theme-toggle-mobile');
+        if (mobileThemeToggle) {
+            mobileThemeToggle.addEventListener('click', () => {
+                const isDark = document.body.classList.toggle('dark-mode');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateChartColors();
+            });
+        }
+    });
+</script>
+{% endblock %}
