@@ -87,6 +87,9 @@ async function loadExpenses(startDate = '', endDate = '') {
                 </td>
             </tr>
         `).join('');
+
+        // ✅ YEH LINE ADD KARO - buttons par event listeners lagao
+        attachButtonListeners();
         
     } catch (error) {
         console.error('Error:', error);
@@ -349,9 +352,13 @@ document.addEventListener('submit', async (e) => {
 });
 
 // Handle edit/delete clicks
+// Handle edit/delete clicks - ISSE REPLACE KARO
 document.addEventListener('click', async (e) => {
+    console.log('Click detected on:', e.target); // Debug line
+    
     // Edit
     if (e.target.classList.contains('edit-btn')) {
+        console.log('Edit button clicked! ID:', e.target.dataset.id); // Debug line
         const id = parseInt(e.target.dataset.id);
         
         try {
@@ -370,30 +377,39 @@ document.addEventListener('click', async (e) => {
                 form.dataset.editId = id;
                 document.getElementById('submit-expense-btn').textContent = 'Update Expense';
                 
-                // Scroll to form
                 form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                console.log('Expense not found with ID:', id);
             }
         } catch (error) {
+            console.error('Error in edit:', error);
             showToast('Failed to load expense', 'danger');
         }
     }
     
     // Delete
     if (e.target.classList.contains('delete-btn')) {
+        console.log('Delete button clicked! ID:', e.target.dataset.id); // Debug line
+        
         if (!confirm('Are you sure you want to delete this expense?')) return;
         
         const id = e.target.dataset.id;
         
         try {
             const response = await fetch(`/delete_expense/${id}`, { method: 'DELETE' });
+            console.log('Delete response:', response.status); // Debug line
+            
             if (response.ok) {
                 showToast('Expense deleted', 'success');
                 loadExpenses();
                 loadStats();
             } else {
+                const errorText = await response.text();
+                console.error('Delete failed:', errorText);
                 throw new Error('Failed to delete');
             }
         } catch (error) {
+            console.error('Error in delete:', error);
             showToast(error.message, 'danger');
         }
     }
@@ -424,3 +440,74 @@ document.getElementById('filter-btn')?.addEventListener('click', () => {
 document.getElementById('export-btn')?.addEventListener('click', () => {
     window.location.href = '/export_expenses';
 });
+
+// Extra safety - direct event listeners on buttons after load
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure edit/delete work after expenses load
+    setTimeout(() => {
+        attachButtonListeners();
+    }, 500);
+});
+
+// Function to manually attach listeners to buttons
+function attachButtonListeners() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = parseInt(this.dataset.id);
+            handleEditClick(id);
+        });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = this.dataset.id;
+            handleDeleteClick(id);
+        });
+    });
+}
+
+// Edit handler function
+async function handleEditClick(id) {
+    try {
+        const response = await fetch('/get_expenses');
+        const expenses = await response.json();
+        const expense = expenses.find(e => e.id === id);
+        
+        if (expense) {
+            document.getElementById('amount').value = expense.amount;
+            document.getElementById('category').value = expense.category;
+            document.getElementById('description').value = expense.description;
+            document.getElementById('date').value = expense.date;
+            
+            const form = document.getElementById('expense-form');
+            form.dataset.editMode = 'true';
+            form.dataset.editId = id;
+            document.getElementById('submit-expense-btn').textContent = 'Update Expense';
+            
+            form.scrollIntoView({ behavior: 'smooth' });
+            showToast('Edit mode activated', 'success');
+        }
+    } catch (error) {
+        showToast('Failed to load expense', 'danger');
+    }
+}
+
+// Delete handler function
+async function handleDeleteClick(id) {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+    
+    try {
+        const response = await fetch(`/delete_expense/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast('Expense deleted', 'success');
+            loadExpenses();
+            loadStats();
+        } else {
+            throw new Error('Failed to delete');
+        }
+    } catch (error) {
+        showToast(error.message, 'danger');
+    }
+}
