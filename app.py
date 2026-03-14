@@ -211,22 +211,43 @@ def update_expense():
     if 'username' not in session:
         return jsonify({"error": "Not authenticated"}), 401
     
-    expenses = load_data(EXPENSES_FILE)
-    username = session['username']
-    expense_id = int(request.form['id'])
-    
-    for expense in expenses[username]:
-        if expense['id'] == expense_id:
-            expense.update({
-                "amount": float(request.form['amount']),
-                "category": request.form['category'],
-                "description": request.form['description'],
-                "date": request.form['date']
-            })
-            break
-    
-    save_data(expenses, EXPENSES_FILE)
-    return jsonify({"success": True})
+    try:
+        expenses = load_data(EXPENSES_FILE)
+        username = session['username']
+        expense_id = int(request.form['id'])
+        
+        # Debug print
+        print(f"Updating expense ID: {expense_id} for user: {username}")
+        print(f"New data: amount={request.form['amount']}, category={request.form['category']}, description={request.form['description']}, date={request.form['date']}")
+        
+        # Find and update the expense
+        expense_found = False
+        for expense in expenses[username]:
+            if expense['id'] == expense_id:
+                expense.update({
+                    "amount": float(request.form['amount']),
+                    "category": request.form['category'],
+                    "description": request.form['description'],
+                    "date": request.form['date']
+                })
+                expense_found = True
+                print(f"Expense updated successfully: {expense}")
+                break
+        
+        if not expense_found:
+            return jsonify({"error": "Expense not found"}), 404
+        
+        # Save the updated data
+        save_data(expenses, EXPENSES_FILE)
+        
+        return jsonify({
+            "success": True, 
+            "message": "Expense updated successfully"
+        })
+        
+    except Exception as e:
+        print(f"Error updating expense: {str(e)}")
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/delete_expense/<int:expense_id>', methods=['DELETE'])
 def delete_expense(expense_id):
