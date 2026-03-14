@@ -88,7 +88,7 @@ async function loadExpenses(startDate = '', endDate = '') {
             </tr>
         `).join('');
 
-        // ✅ YEH LINE ADD KARO - buttons par event listeners lagao
+        // Attach button listeners after loading
         attachButtonListeners();
         
     } catch (error) {
@@ -251,7 +251,7 @@ function updateCharts(stats) {
 // Toggle select all/deselect all
 let allSelected = false;
 
-document.getElementById('select-all-btn').addEventListener('click', function() {
+document.getElementById('select-all-btn')?.addEventListener('click', function() {
     const checkboxes = document.querySelectorAll('input[name="split-with"]');
     
     if (allSelected) {
@@ -300,7 +300,7 @@ document.addEventListener('submit', async (e) => {
     }
 });
 
-// Expense form
+// Expense form - SINGLE HANDLER (YEH WALA RAKHO, DOOSRA HATAO)
 document.addEventListener('submit', async (e) => {
     if (e.target.id === 'expense-form') {
         e.preventDefault();
@@ -323,6 +323,7 @@ document.addEventListener('submit', async (e) => {
             if (form.dataset.editMode === 'true') {
                 url = '/update_expense';
                 body.append('id', form.dataset.editId);
+                console.log('Updating expense ID:', form.dataset.editId);
             }
             
             const response = await fetch(url, {
@@ -331,7 +332,10 @@ document.addEventListener('submit', async (e) => {
                 body: body
             });
             
-            if (response.ok) {
+            const result = await response.json();
+            console.log('Response:', result);
+            
+            if (response.ok && result.success) {
                 // Reset form
                 form.reset();
                 delete form.dataset.editMode;
@@ -343,16 +347,16 @@ document.addEventListener('submit', async (e) => {
                 loadExpenses();
                 loadStats();
             } else {
-                throw new Error('Failed to save expense');
+                throw new Error(result.error || 'Failed to save expense');
             }
         } catch (error) {
+            console.error('Error:', error);
             showToast(error.message, 'danger');
         }
     }
 });
 
 // Handle edit/delete clicks
-// Handle edit/delete clicks - ISSE REPLACE KARO
 document.addEventListener('click', async (e) => {
     console.log('Click detected on:', e.target); // Debug line
     
